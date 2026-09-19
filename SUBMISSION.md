@@ -73,4 +73,4 @@ Being strictly honest about what is wired versus what is compatible:
 
 - Live report (EdgeOne Makers): https://refundguard-dpaq1q5aneiq.edgeone.dev
 - Repo: https://github.com/zubair480/refundguard
-- Demo video: [demo video link]
+- Demo video: https://github.com/zubair480/refundguard/blob/main/demo.mp4
