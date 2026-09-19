@@ -54,6 +54,59 @@ function startJob(opts) {
   return jobId;
 }
 
+// Replays a recorded run through the same event stream, compressed to under a minute. No model calls, no cost.
+// The events are rebuilt from the saved run file, so what plays back is exactly what happened.
+function startReplay(runId) {
+  const run = readRuns().find(r => r.id === runId);
+  if (!run) return null;
+  const jobId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const job = { events: [], clients: new Set(), done: false };
+  jobs.set(jobId, job); running = jobId;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const jitter = (a, b) => a + Math.random() * (b - a);
+  const slim = r => r.persona;
+  async function play(r) {
+    const id = r.persona.id, tools = [...(r.toolLog || [])], bots = r.transcript.filter(t => t.who === 'bot').length;
+    let botSeen = 0;
+    await sleep(jitter(100, 900));
+    for (const t of r.transcript) {
+      if (t.who === 'bot') {
+        botSeen++;
+        const share = botSeen === bots ? tools.length : Math.ceil(tools.length / Math.max(1, bots - botSeen + 1));
+        for (const tool of tools.splice(0, share)) { await sleep(jitter(250, 500)); publish(job, { type: 'tool', personaId: id, ...tool }); }
+      }
+      await sleep(t.who === 'bot' ? jitter(1100, 1900) : jitter(500, 1000));
+      publish(job, { type: 'turn', personaId: id, personaName: r.persona.name, who: t.who, text: t.text });
+    }
+    publish(job, { type: 'verifying', personaId: id });
+    await sleep(jitter(700, 1300));
+    publish(job, { type: 'conversation', result: r });
+  }
+  async function wave(list) {
+    let i = 0;
+    await Promise.all(Array.from({ length: 7 }, async () => { while (i < list.length) await play(list[i++]); }));
+  }
+  (async () => {
+    try {
+      const gens = [...new Set(run.results.map(r => r.persona.gen || 0))].sort((a, b) => a - b);
+      const first = run.results.filter(r => (r.persona.gen || 0) === gens[0]);
+      publish(job, { type: 'start', replay: true, victimVersion: run.victimVersion, label: `${run.label} · replay of recorded run`, turns: 0, models: run.models, personas: first.map(slim) });
+      await wave(first);
+      for (const g of gens.slice(1)) {
+        const kids = run.results.filter(r => (r.persona.gen || 0) === g);
+        await sleep(600);
+        publish(job, { type: 'evolve', generation: g, count: kids.length, personas: kids.map(slim) });
+        await wave(kids);
+      }
+      await sleep(900);
+      publish(job, { type: 'done', runId: run.id, gate: run.gate, totals: run.totals, replay: true });
+    } catch (e) { publish(job, { type: 'error', message: `replay failed: ${e.message}` }); }
+    job.done = true; if (running === jobId) running = null;
+    for (const res of job.clients) res.end(); job.clients.clear();
+  })();
+  return jobId;
+}
+
 function readBody(req, limit = 4096) {
   return new Promise((resolve, reject) => { let b = ''; req.on('data', d => { b += d; if (b.length > limit) { reject(new Error('body too large')); req.destroy(); } }); req.on('end', () => resolve(b)); req.on('error', reject); });
 }
@@ -70,6 +123,10 @@ const server = http.createServer(async (req, res) => {
       if (!/^application\/json/.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'send application/json' });
       if (running) return send(res, 409, { error: 'a run is already in progress', jobId: running });
       let opts; try { opts = JSON.parse(await readBody(req) || '{}'); } catch { return send(res, 400, { error: 'invalid JSON body' }); }
+      if (opts?.replay) {
+        const jobId = startReplay(String(opts.replay));
+        return jobId ? send(res, 202, { jobId, replay: true }) : send(res, 404, { error: 'no recorded run with that id' });
+      }
       return send(res, 202, { jobId: startJob(opts || {}) });
     }
     const m = url.pathname.match(/^\/api\/jobs\/([a-z0-9]+)\/events$/);

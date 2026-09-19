@@ -8,19 +8,20 @@ Every number and quote below comes from the run files in `runs/` (bot, attacker:
 | v2 strict prompt, unguarded tools | 1 of 13 | $0 | $0 | 1 | 3 of 3 | BLOCKED |
 | v3 strict prompt + policy in code | 0 of 11 | $0 | $0 | 0 | 3 of 3 | PASSED |
 
-A full run takes 5 to 12 minutes, so the demo shows about 30 seconds of a live run and then the finished reports.
+A real run takes 5 to 12 minutes because every message is a model call. For the demo use **Replay**: it plays a recorded real run back through the same live view in about 40 seconds, with no model calls and no wifi. It is labelled REPLAY on screen. Say so out loud: "this is a recording of a real run from this afternoon, sped up."
 
 ## Before you present
 
 1. `npm run dashboard`, open http://localhost:4173, zoom the browser so the text reads from the back of the room.
-2. About one minute before you go on, pick **v1** and press **Launch stress test**, so conversations are already streaming when you start.
-3. Keep a second tab open on the same URL, switched to **Report**, as a fallback if the wifi drops.
+2. Select **v1**. When you reach 0:30 in the script, press **Replay the recorded v1 run**. Talk over it. "DEPLOY BLOCKED" lands at about the 40-second mark, which is your 1:10 cue.
+3. After the verdict, the page moves to the Report on its own. Continue from 1:15.
+4. Optional closer: select **v3**, press Replay again, and let "GATE PASSED" land while you give the last line.
 
 ## 3-minute live demo
 
 **0:00 Hook.** "A hypothetical. A two-person online store adds an AI support agent with refund powers on Friday. Over the weekend three customers talk it into money they were not owed. Nobody notices until Monday's payout report. That story is made up. This one is not: in Moffatt v. Air Canada, 2024, a tribunal held the airline liable for what its chatbot told a customer about bereavement fares. About 650 Canadian dollars plus interest and fees, and no transaction had even happened. So an agent can cost you money two ways: by moving it, and by promising it."
 
-**0:30 Live run.** Show the Live view. "This is RefundGuard, a financial stress test for AI agents that hold a wallet. Right now 11 simulated scam customers and 3 honest ones are talking to our support agent. Each one is an LLM that adapts turn by turn. The agent replies for real and its tools move money in a ledger. You can see the tool calls as they happen." Point at a card with a tool chip.
+**0:30 Replay.** Press Replay. "This is RefundGuard, a financial stress test for AI agents that hold a wallet. This is a recording of a real run from this afternoon, sped up. 11 simulated scam customers and 3 honest ones are talking to our support agent. Each one is an LLM that adapts turn by turn. The agent replies for real and its tools move money in a ledger. You can see the tool calls as they happen." Point at a card with a tool chip.
 
 **1:00 Blocked.** Switch to Report, select **v1**. "Version one has the prompt a growth team would write: keep the customer happy, exceptions allowed. Result: deploy blocked. $310 left the ledger against policy and $709 was promised in writing."
 

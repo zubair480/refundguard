@@ -380,6 +380,7 @@
         <label>Turns per chat<select id="f-turns"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
       </div>
       <button class="primary" id="launch" type="submit">Launch stress test</button>
+      <button class="ghost" id="replay" type="button" style="width:100%;margin-top:8px;padding:10px 12px">Replay recorded run</button>
       <div class="fine" id="launch-note">Uses real model calls. One run at a time; the gate verdict appears when every conversation has been verified.</div>
     </form>
   </section>
@@ -509,9 +510,26 @@ const renderLauncher = safely(() => {
   if (!S.labelEdited) $('#f-label').value = VERS[S.victim].label;
   for (const id of ['f-label', 'f-evolve', 'f-variants', 'f-turns', 'launch']) $('#' + id).disabled = run;
   $('#launch').innerHTML = STATIC ? 'Launch stress test' : run ? '<span class="dot pulse"></span>Stress test running…' : 'Launch stress test';
-  $('#launch-state').innerHTML = STATIC ? chip('', 'static report') : run ? chip('red', '<span class="dot pulse"></span>live') : '';
+  $('#launch-state').innerHTML = STATIC ? chip('', 'static report') : run ? chip('red', `<span class="dot pulse"></span>${/ replay of recorded run$/.test(job?.label || '') ? 'replay' : 'live'}`) : '';
   if (STATIC) $('#launch-note').textContent = 'Static report. Launch runs from the local app.';
+  const rec = recordedRun();
+  $('#replay').hidden = !!STATIC;
+  $('#replay').disabled = run || !rec;
+  $('#replay').textContent = rec ? `▶ Replay the recorded ${S.victim} run in under a minute (no model calls)` : `No recorded ${S.victim} run to replay yet`;
 }, 'launcher');
+// Newest real (non-mock) run of the selected bot version.
+const recordedRun = () => arr(S.runs).filter(r => r?.victimVersion === S.victim && !r?.mock).sort((a, b) => String(a.startedAt).localeCompare(String(b.startedAt))).pop();
+$('#replay').addEventListener('click', async () => {
+  const rec = recordedRun(); if (!rec || isRunning() || STATIC) return;
+  $('#replay').disabled = true;
+  try {
+    const { ok, status, body } = await getJSON('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ replay: rec.id }) });
+    if (ok && body?.jobId) attach(body.jobId, { victim: rec.victimVersion, label: `${rec.label} · replay of recorded run`, turns: 0 });
+    else if (status === 409 && body?.jobId) { toast('A run is already in progress. Showing it live.'); attach(body.jobId, {}); }
+    else throw new Error(body?.error || 'HTTP ' + status);
+  } catch (err) { toast('Could not start the replay: ' + (err?.message || err), true); }
+  renderLauncher();
+});
 $('#seg').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b || b.disabled) return; S.victim = b.dataset.v; renderLauncher(); });
 $('#f-label').addEventListener('input', () => { S.labelEdited = true; });
 $('#launcher').addEventListener('submit', async e => {
@@ -576,7 +594,8 @@ function pollUntilDone() {
 function setConn(state) {
   const el = $('#live-badge'); if (!el) return;
   el.className = 'live-badge' + (state === 'live' ? '' : ' off');
-  el.innerHTML = state === 'live' ? '<span class="dot pulse"></span>LIVE' : state === 'reconnecting' ? '<span class="dot"></span>RECONNECTING' : state === 'done' ? '<span class="dot"></span>FINISHED' : state === 'failed' ? '<span class="dot"></span>STOPPED' : '<span class="dot"></span>OFFLINE';
+  const replay = / replay of recorded run$/.test(job?.label || '');
+  el.innerHTML = state === 'live' ? `<span class="dot pulse"></span>${replay ? 'REPLAY' : 'LIVE'}` : state === 'reconnecting' ? '<span class="dot"></span>RECONNECTING' : state === 'done' ? '<span class="dot"></span>FINISHED' : state === 'failed' ? '<span class="dot"></span>STOPPED' : '<span class="dot"></span>OFFLINE';
 }
 function buildLiveShell() {
   $('#live').innerHTML = `
@@ -1023,6 +1042,7 @@ showVerdict = function (gate) { _showVerdict(gate); try { fxVerdict(gate); } cat
 (async function boot() {
   renderLauncher();
   const [, cfg] = await Promise.all([loadRuns(), loadConfig()]);
+  renderLauncher();
   if (!STATIC && cfg?.running?.jobId && !job) { toast('A stress test is in progress. Showing it live.'); attach(cfg.running.jobId, {}); }
 })();
 </script>
