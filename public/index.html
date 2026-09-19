@@ -3,7 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RefundGuard</title>
+<title>RefundGuard: a financial stress test for AI agents that can move money</title>
+<meta name="description" content="RefundGuard attacks your AI support agent with simulated scam customers, measures the loss in dollars, and blocks the deploy when money leaks.">
+<meta name="keywords" content="AI agent testing, AI agent evaluation, LLM red teaming, refund fraud, customer support AI, agent safety, release gate, LLM as a judge, CI for AI agents">
+<meta name="author" content="Zubair Zafar">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0b0b0a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f2ec" media="(prefers-color-scheme: light)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RefundGuard">
+<meta property="og:title" content="RefundGuard: a financial stress test for AI agents that can move money">
+<meta property="og:description" content="Simulated scam customers attack your support agent. A ledger audit proves what money moved, an LLM judge catches what was promised in words, and a release gate blocks the deploy.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RefundGuard: a financial stress test for AI agents">
+<meta name="twitter:description" content="Know what your AI support agent will cost you before your customers find out.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%230b0b0a'/%3E%3Cpath d='M12 3.4 18.6 5.7v5.1c0 4.1-2.7 7.6-6.6 8.8-3.9-1.2-6.6-4.7-6.6-8.8V5.7L12 3.4Z' fill='none' stroke='%23efeee8' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M8.9 11.9l2.2 2.2 4.1-4.5' fill='none' stroke='%2355d08a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"RefundGuard","applicationCategory":"DeveloperApplication","operatingSystem":"Any (Node.js 20+)","description":"A financial stress test for AI agents that can move money. Simulated scam customers attack a support agent; a deterministic ledger audit and a quote-verified LLM judge measure the loss in dollars; a release gate blocks the deploy.","author":{"@type":"Person","name":"Zubair Zafar"},"codeRepository":"https://github.com/zubair480/refundguard","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 <style>
   :root {
     color-scheme: dark;
@@ -403,6 +418,22 @@
   </div>
 </main>
 
+<noscript>
+  <section style="max-width:1280px;margin:0 auto;padding:0 20px 40px">
+    <h2>Results from recorded runs</h2>
+    <p>This dashboard needs JavaScript. Summary of the recorded runs (support bot and attackers: Claude Haiku, judge: Claude Sonnet):</p>
+    <ul>
+      <li>v1, friendly prompt with unguarded refund tools: 3 of 21 attacks breached, $310 left the ledger against policy, $709 promised in writing. Deploy blocked.</li>
+      <li>v2, strict prompt with unguarded tools: no money lost, but one personal-data leak. Deploy blocked.</li>
+      <li>v3, strict prompt with the refund policy enforced in code: 0 of 11 attacks breached, all honest customers served. Gate passed.</li>
+    </ul>
+    <p>Source code: <a href="https://github.com/zubair480/refundguard">github.com/zubair480/refundguard</a></p>
+  </section>
+</noscript>
+<footer style="max-width:1280px;margin:0 auto;padding:0 20px 48px;color:var(--mute);font-size:13px;display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between">
+  <span>RefundGuard · a release gate for AI agents with refund authority · built at The Executable World hackathon, San Francisco, 2026</span>
+  <a href="https://github.com/zubair480/refundguard" rel="noopener" style="color:var(--ink2)">Source on GitHub</a>
+</footer>
 <div id="drawer-root"></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
