@@ -2,7 +2,7 @@
 
 **A financial stress test for AI agents that hold a wallet.** Built at The Executable World hackathon, Track 2: Production ready AI Agent.
 
-**Live report:** https://refundguard-app-dpsdzic1df9i.edgeone.dev (hosted on Tencent EdgeOne Makers)
+**Live report:** https://refundguard-dpaq1q5aneiq.edgeone.dev (hosted on Tencent EdgeOne Makers)
 
 Banks must pass a stress test before they are trusted with money. Support agents with refund authority ship after a vibe check.
 RefundGuard attacks your agent with simulated scam customers before every release, measures the loss in dollars, and blocks the deploy.

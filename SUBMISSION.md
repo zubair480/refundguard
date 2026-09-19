@@ -64,13 +64,13 @@ The stricter prompt (v2) stopped the money but still told a stranger the email o
 
 Being strictly honest about what is wired versus what is compatible:
 
-- **Tencent EdgeOne**: the LLM layer is compatible with the EdgeOne Makers model gateway today, since it speaks the standard OpenAI-compatible chat completions API (`VICTIM_PROVIDER=openai` with an EdgeOne Makers `BASE_URL`). The report is hosted on EdgeOne Makers: https://refundguard-app-dpsdzic1df9i.edgeone.dev (Makers imports the GitHub repo, runs `npm run export` and deploys `dist/` on every push). In the recorded runs all three roles ran on Claude models; a Makers gateway model was not used.
+- **Tencent EdgeOne**: the LLM layer is compatible with the EdgeOne Makers model gateway today, since it speaks the standard OpenAI-compatible chat completions API (`VICTIM_PROVIDER=openai` with an EdgeOne Makers `BASE_URL`). The report is hosted on EdgeOne Makers: https://refundguard-dpaq1q5aneiq.edgeone.dev (static export from `npm run export`. The GitHub repo is also connected to Makers, which builds and deploys it on every push). In the recorded runs all three roles ran on Claude models; a Makers gateway model was not used.
 - **AgentX**: integration-ready, not wired. Each run already writes one JSON trace file with every conversation's messages, tool calls, ledger entries and judge verdicts, so exporting those as AgentX traces is the next step.
 - **VeloDB**: integration-ready, not wired. The same per-run JSON traces are the natural rows for a VeloDB table if we wanted to query across many runs.
 - **ServiceNow, TikTok, AWS, Memories.ai**: no integration attempted for this submission.
 
 ## Links
 
-- Live report (EdgeOne Makers): https://refundguard-app-dpsdzic1df9i.edgeone.dev
+- Live report (EdgeOne Makers): https://refundguard-dpaq1q5aneiq.edgeone.dev
 - Repo: https://github.com/zubair480/refundguard
 - Demo video: [demo video link]
