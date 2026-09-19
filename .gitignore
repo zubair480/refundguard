@@ -1,0 +1,7 @@
+.env
+node_modules/
+dist/
+runs-*.log
+runs/_superseded/
+runs-backup-prejudge/
+rejudge.log

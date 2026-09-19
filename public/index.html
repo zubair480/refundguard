@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RefundGuard</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#090a0c; --panel:#101216; --panel2:#15181d; --line:#22262e; --line2:#313640;
+    --ink:#f3f4f6; --ink2:#b9bec9; --mute:#7f8695;
+    --red:#ff5b4f; --green:#3ddc84; --amber:#f5b94a; --accent:#93a3ff;
+    --on-red:#1c0503; --on-green:#03190d; --btn:#f3f4f6; --on-btn:#0b0c0e;
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 40px rgba(0,0,0,.35);
+    --mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,Menlo,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI Variable Display","Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: light) { :root {
+    color-scheme: light;
+    --bg:#f6f6f3; --panel:#ffffff; --panel2:#fafaf7; --line:#e5e4de; --line2:#d3d2ca;
+    --ink:#14161a; --ink2:#3c414b; --mute:#6b7180;
+    --red:#d22f1f; --green:#15803d; --amber:#a16207; --accent:#3b4fd8;
+    --on-red:#ffffff; --on-green:#ffffff; --btn:#14161a; --on-btn:#ffffff;
+    --shadow:0 1px 2px rgba(20,22,26,.05), 0 12px 32px rgba(20,22,26,.07);
+  } }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 var(--sans); overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+  button, input, select { font:inherit; color:inherit; }
+  button { cursor:pointer; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+  .tint-red { background:color-mix(in srgb, var(--red) 13%, transparent); }
+  .mute { color:var(--mute); } .nums { font-variant-numeric:tabular-nums; }
+
+  /* top bar */
+  .top { position:sticky; top:0; z-index:30; background:color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter:saturate(1.4) blur(12px); -webkit-backdrop-filter:saturate(1.4) blur(12px); border-bottom:1px solid var(--line); }
+  .top-in { max-width:1280px; margin:0 auto; padding:10px 20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .brand { display:flex; align-items:center; gap:9px; font-weight:700; font-size:16px; letter-spacing:-.02em; color:var(--ink); text-decoration:none; }
+  .brand svg { width:22px; height:22px; }
+  .brand-tag { color:var(--mute); font-size:13px; padding-left:14px; border-left:1px solid var(--line2); }
+  .models { margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  @media (max-width:900px) { .brand-tag { display:none; } .models { margin-left:0; width:100%; } }
+
+  main { max-width:1280px; margin:0 auto; padding:0 20px 96px; }
+  @media (max-width:520px) { main { padding:0 16px 72px; } .top-in { padding:10px 16px; } }
+
+  .eyebrow { font:600 11px/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--mute); }
+  h2.sec { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; font-size:19px; letter-spacing:-.02em; margin:44px 0 14px; font-weight:650; }
+  h2.sec small { font-size:13px; font-weight:400; color:var(--mute); letter-spacing:0; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; }
+
+  /* chips */
+  .chip { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; line-height:1; padding:5px 9px; border-radius:99px; white-space:nowrap; border:1px solid var(--line2); color:var(--ink2); background:var(--panel2); max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+  .chip b { font-weight:600; color:var(--mute); font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+  .chip.red { color:var(--red); border-color:color-mix(in srgb, var(--red) 45%, transparent); background:color-mix(in srgb, var(--red) 12%, transparent); }
+  .chip.green { color:var(--green); border-color:color-mix(in srgb, var(--green) 40%, transparent); background:color-mix(in srgb, var(--green) 11%, transparent); }
+  .chip.amber { color:var(--amber); border-color:color-mix(in srgb, var(--amber) 42%, transparent); background:color-mix(in srgb, var(--amber) 11%, transparent); }
+  .chip.accent { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 42%, transparent); background:color-mix(in srgb, var(--accent) 11%, transparent); }
+  .chip.wrap { white-space:normal; line-height:1.35; border-radius:10px; }
+  .dot { width:7px; height:7px; border-radius:50%; background:currentColor; flex:none; }
+  .dot.pulse { animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; box-shadow:0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); } 50% { opacity:.55; box-shadow:0 0 0 5px transparent; } }
+
+  /* hero + launcher */
+  .hero { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:36px; align-items:center; padding:40px 0 8px; }
+  @media (max-width:940px) { .hero { grid-template-columns:minmax(0,1fr); gap:24px; padding-top:28px; } }
+  .hero h1 { font-size:clamp(28px,4.2vw,46px); line-height:1.06; letter-spacing:-.035em; margin:14px 0 14px; font-weight:700; text-wrap:balance; }
+  .hero p { color:var(--ink2); font-size:16px; margin:0; max-width:58ch; }
+  .suite { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
+  .launcher { padding:20px; box-shadow:var(--shadow); min-width:0; }
+  .launcher-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; }
+  .seg { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; padding:4px; background:var(--bg); border:1px solid var(--line); border-radius:11px; }
+  .seg button { border:1px solid transparent; background:transparent; border-radius:8px; padding:9px 6px; text-align:center; min-width:0; transition:background .15s,border-color .15s; }
+  .seg button strong { display:block; font:700 15px/1.1 var(--mono); }
+  .seg button span { display:block; font-size:11.5px; color:var(--mute); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .seg button:hover { background:var(--panel2); }
+  .seg button[aria-checked="true"] { background:var(--panel2); border-color:var(--line2); box-shadow:0 1px 3px rgba(0,0,0,.25); }
+  .seg button[aria-checked="true"] span { color:var(--ink2); }
+  .seg button:disabled { opacity:.55; cursor:not-allowed; }
+  .launcher .vdesc { margin:12px 2px 14px; color:var(--ink2); font-size:13.5px; min-height:2.9em; }
+  .opts { display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:8px; margin-bottom:14px; }
+  @media (max-width:520px) { .opts { grid-template-columns:1fr 1fr 1fr; } .opts label:first-child { grid-column:1/-1; } }
+  .opts label { display:block; font-size:11px; color:var(--mute); min-width:0; }
+  .opts input, .opts select { display:block; width:100%; margin-top:4px; padding:7px 9px; background:var(--bg); border:1px solid var(--line); border-radius:8px; font-size:13px; min-width:0; }
+  .opts input:disabled, .opts select:disabled { opacity:.55; }
+  .primary { width:100%; border:0; border-radius:10px; padding:13px 16px; background:var(--btn); color:var(--on-btn); font-weight:650; font-size:15px; letter-spacing:-.01em; display:flex; justify-content:center; align-items:center; gap:9px; transition:transform .12s, opacity .15s; }
+  .primary:hover:not(:disabled) { transform:translateY(-1px); }
+  .primary:disabled { opacity:.6; cursor:not-allowed; }
+  .fine { font-size:12px; color:var(--mute); margin-top:10px; }
+  .ghost { border:1px solid var(--line2); background:transparent; border-radius:8px; padding:7px 12px; font-size:13px; font-weight:550; }
+  .ghost:hover { background:var(--panel2); }
+
+  /* view tabs */
+  .tabs { display:inline-flex; gap:2px; padding:3px; border:1px solid var(--line); border-radius:10px; background:var(--panel); margin-top:28px; }
+  .tabs button { border:0; background:transparent; border-radius:7px; padding:6px 14px; font-size:13px; font-weight:600; color:var(--mute); display:flex; align-items:center; gap:7px; }
+  .tabs button[aria-selected="true"] { background:var(--panel2); color:var(--ink); box-shadow:0 0 0 1px var(--line2); }
+
+  /* live theater */
+  .live-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:22px 0 14px; }
+  .live-head h2 { margin:0; font-size:19px; letter-spacing:-.02em; font-weight:650; }
+  .live-badge { color:var(--red); font:700 11px/1 var(--mono); letter-spacing:.14em; display:inline-flex; gap:7px; align-items:center; padding:6px 10px; border-radius:99px; border:1px solid color-mix(in srgb, var(--red) 45%, transparent); }
+  .live-badge.off { color:var(--mute); border-color:var(--line2); }
+  .counters { display:grid; grid-template-columns:1.35fr 1.35fr 1fr 1fr; gap:12px; }
+  @media (max-width:900px) { .counters { grid-template-columns:1fr 1fr; } }
+  .counter { padding:18px 20px; min-width:0; transition:border-color .3s, background .3s; }
+  .counter .v { font-size:clamp(34px,5.4vw,68px); font-weight:700; line-height:1; letter-spacing:-.04em; font-variant-numeric:tabular-nums; margin-top:12px; transition:color .3s; }
+  .counter.sm .v { font-size:clamp(28px,3.6vw,44px); }
+  .counter .l { color:var(--mute); font-size:12.5px; margin-top:8px; }
+  .counter.hot { border-color:color-mix(in srgb, var(--red) 55%, transparent); background:color-mix(in srgb, var(--red) 7%, var(--panel)); }
+  .counter.hot .v { color:var(--red); }
+  .counter.safe .v { color:var(--green); }
+  .counter.bump { animation:bump .5s ease-out; }
+  @keyframes bump { 0% { transform:scale(1); } 30% { transform:scale(1.025); } 100% { transform:scale(1); } }
+  .progress { height:3px; background:var(--line); border-radius:3px; overflow:hidden; margin:14px 0 0; }
+  .progress i { display:block; height:100%; width:0; background:var(--ink2); transition:width .5s ease; }
+  .progress-l { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:12.5px; color:var(--mute); margin-top:7px; }
+  .evolog { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+  .evoline { font-size:13px; color:var(--ink2); padding:9px 12px; border:1px dashed color-mix(in srgb, var(--accent) 50%, transparent); border-radius:10px; background:color-mix(in srgb, var(--accent) 7%, transparent); animation:rise .4s ease-out both; }
+  .verdict { margin-top:16px; border-radius:16px; padding:clamp(22px,4vw,44px); animation:pop .55s cubic-bezier(.2,.9,.25,1.15) both; }
+  .verdict.fail { background:var(--red); color:var(--on-red); }
+  .verdict.pass { background:var(--green); color:var(--on-green); }
+  .verdict.unknown { background:var(--panel2); border:1px solid var(--line2); }
+  .verdict .big { font-size:clamp(34px,7.4vw,92px); font-weight:800; letter-spacing:-.045em; line-height:.98; }
+  .verdict .eyebrow { color:inherit; opacity:.75; margin-bottom:12px; }
+  .verdict ul { margin:16px 0 0; padding-left:20px; font-size:clamp(15px,1.7vw,20px); font-weight:550; }
+  .verdict p { margin:14px 0 0; font-size:clamp(15px,1.6vw,19px); font-weight:500; max-width:70ch; }
+  .verdict .ghost { margin-top:20px; border-color:currentColor; color:inherit; font-size:14px; padding:9px 16px; }
+  .verdict .ghost:hover { background:color-mix(in srgb, currentColor 12%, transparent); }
+  @keyframes pop { 0% { opacity:0; transform:scale(.96) translateY(8px); } 100% { opacity:1; transform:none; } }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr)); gap:12px; margin-top:18px; }
+  .ccard { display:flex; flex-direction:column; min-width:0; overflow:hidden; animation:rise .45s ease-out both; transition:border-color .3s, box-shadow .3s; }
+  @keyframes rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  .ccard header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:13px 14px 0; }
+  .ccard .cname { font-weight:650; font-size:14px; letter-spacing:-.01em; line-height:1.3; overflow-wrap:anywhere; }
+  .ccard .cmeta { padding:7px 14px 0; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .ccard .ctactic { padding:6px 14px 0; font-size:12px; color:var(--mute); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .ccard .chat { height:188px; overflow-y:auto; margin:11px 0 0; padding:10px 12px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--bg); display:flex; flex-direction:column; gap:7px; scrollbar-width:thin; }
+  .ccard .chat .wait { margin:auto; color:var(--mute); font-size:12.5px; }
+  .bub { max-width:90%; padding:7px 10px; border-radius:11px; font-size:12.5px; line-height:1.45; white-space:pre-wrap; overflow-wrap:anywhere; animation:rise .3s ease-out both; flex:none; }
+  .bub.customer { background:var(--panel2); border:1px solid var(--line); border-bottom-left-radius:4px; align-self:flex-start; }
+  .bub.bot { background:color-mix(in srgb, var(--accent) 15%, var(--panel)); border:1px solid color-mix(in srgb, var(--accent) 28%, transparent); border-bottom-right-radius:4px; align-self:flex-end; }
+  .typing { display:flex; gap:4px; padding:4px 2px; flex:none; }
+  .typing i { width:5px; height:5px; border-radius:50%; background:var(--mute); animation:blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay:.2s; } .typing i:nth-child(3) { animation-delay:.4s; }
+  @keyframes blink { 0%,80%,100% { opacity:.25; } 40% { opacity:1; } }
+  .ccard .ctools { display:flex; gap:5px; flex-wrap:wrap; padding:9px 12px 0; min-height:34px; }
+  .tchip { font:500 11px/1 var(--mono); padding:5px 7px; border-radius:6px; border:1px solid var(--line); color:var(--ink2); background:var(--panel2); animation:rise .3s ease-out both; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tchip.money { color:var(--amber); border-color:color-mix(in srgb, var(--amber) 45%, transparent); background:color-mix(in srgb, var(--amber) 10%, transparent); }
+  .ccard footer { padding:10px 14px 13px; font-size:12.5px; color:var(--mute); display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; min-height:44px; }
+  .ccard footer .loss { color:var(--red); font-weight:650; font-variant-numeric:tabular-nums; }
+  .ccard footer .ok { color:var(--green); font-weight:600; }
+  .ccard footer button { border:0; background:none; color:var(--accent); font-size:12.5px; font-weight:600; padding:0; }
+  .ccard.s-breached { border-color:color-mix(in srgb, var(--red) 60%, transparent); box-shadow:0 0 0 1px color-mix(in srgb, var(--red) 30%, transparent), 0 10px 40px color-mix(in srgb, var(--red) 12%, transparent); animation:flash .9s ease-out; }
+  .ccard.s-held, .ccard.s-served { border-color:color-mix(in srgb, var(--green) 35%, var(--line)); }
+  @keyframes flash { 0% { background:color-mix(in srgb, var(--red) 30%, var(--panel)); } 100% { background:var(--panel); } }
+
+  /* report */
+  .gate { display:flex; gap:18px; align-items:flex-start; padding:22px 24px; border-radius:14px; margin-top:22px; border:1px solid; }
+  .gate.fail { background:color-mix(in srgb, var(--red) 10%, var(--panel)); border-color:color-mix(in srgb, var(--red) 55%, transparent); }
+  .gate.pass { background:color-mix(in srgb, var(--green) 9%, var(--panel)); border-color:color-mix(in srgb, var(--green) 50%, transparent); }
+  .gate.unknown { background:var(--panel); border-color:var(--line2); }
+  .gate .ico { width:44px; height:44px; flex:none; border-radius:12px; display:grid; place-items:center; }
+  .gate.fail .ico { background:var(--red); color:var(--on-red); } .gate.pass .ico { background:var(--green); color:var(--on-green); } .gate.unknown .ico { background:var(--line2); }
+  .gate .ico svg { width:24px; height:24px; }
+  .gate .gt { font-size:clamp(22px,3vw,32px); font-weight:750; letter-spacing:-.03em; line-height:1.1; }
+  .gate.fail .gt { color:var(--red); } .gate.pass .gt { color:var(--green); }
+  .gate ul { margin:8px 0 0; padding-left:18px; color:var(--ink2); } .gate p { margin:8px 0 0; color:var(--ink2); }
+  .gate .gmeta { margin-left:auto; text-align:right; font-size:12.5px; color:var(--mute); flex:none; max-width:40%; overflow-wrap:anywhere; }
+  .gate .gmeta strong { display:block; color:var(--ink); font-size:14px; font-weight:600; }
+  @media (max-width:640px) { .gate { flex-wrap:wrap; padding:18px; } .gate .gmeta { margin-left:0; text-align:left; max-width:100%; width:100%; } }
+  .badges { display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
+  .kpis { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; margin-top:14px; }
+  .kpi { padding:16px 18px; min-width:0; grid-column:span 2; }
+  @media (max-width:980px) { .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .kpi { grid-column:span 1; } }
+  @media (max-width:420px) { .kpis { grid-template-columns:minmax(0,1fr); } }
+  .kpi .v { font-size:clamp(28px,3.2vw,42px); font-weight:700; line-height:1.05; letter-spacing:-.035em; font-variant-numeric:tabular-nums; margin:12px 0 6px; overflow-wrap:anywhere; }
+  .kpi .v.bad { color:var(--red); } .kpi .v.good { color:var(--green); } .kpi .v.warn { color:var(--amber); }
+  .kpi .l { color:var(--mute); font-size:12.5px; }
+  .kpi.bad { border-color:color-mix(in srgb, var(--red) 40%, var(--line)); }
+
+  .chart-panel { padding:18px 18px 8px; }
+  .legend { display:flex; gap:18px; flex-wrap:wrap; font-size:12.5px; color:var(--ink2); margin-bottom:6px; }
+  .legend span { display:inline-flex; align-items:center; gap:7px; }
+  .sw { width:12px; height:12px; border-radius:3px; background:var(--red); flex:none; }
+  .sw.hatch { background:repeating-linear-gradient(45deg, var(--red) 0 2.5px, color-mix(in srgb, var(--red) 22%, transparent) 2.5px 5px); }
+  .sw.zero { background:var(--green); height:4px; }
+  .chartwrap { overflow-x:auto; scrollbar-width:thin; }
+  .chartwrap svg { display:block; font-family:var(--sans); }
+  .chartwrap text { fill:var(--mute); font-size:11.5px; font-variant-numeric:tabular-nums; }
+  .chartwrap .grid { stroke:var(--line); stroke-width:1; shape-rendering:crispEdges; }
+  .chartwrap .base { stroke:var(--line2); }
+  .chartwrap .grp { cursor:pointer; outline:none; }
+  .chartwrap .hit { fill:transparent; transition:fill .15s; }
+  .chartwrap .grp:hover .hit, .chartwrap .grp:focus-visible .hit { fill:color-mix(in srgb, var(--ink) 5%, transparent); }
+  .chartwrap .grp.sel .hit { fill:color-mix(in srgb, var(--accent) 10%, transparent); stroke:color-mix(in srgb, var(--accent) 45%, transparent); }
+  .chartwrap .bar { transform-box:fill-box; transform-origin:50% 100%; }
+  .chartwrap .bar.grow { animation:grow .9s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes grow { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+  .chartwrap .val { font-size:12.5px; font-weight:700; }
+  .chartwrap .val.r { fill:var(--red); } .chartwrap .val.g { fill:var(--green); }
+  .chartwrap .xl { fill:var(--ink); font-size:12.5px; font-weight:600; }
+  .chartwrap .pill-t { font:700 9.5px var(--mono); letter-spacing:.1em; }
+
+  .scroll { overflow-x:auto; scrollbar-width:thin; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:14px; }
+  th { text-align:left; font:600 10.5px/1 var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--mute); padding:13px 14px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  td { padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tr:last-child td { border-bottom:0; }
+  tbody tr { cursor:pointer; transition:background .12s; }
+  tbody tr:hover { background:color-mix(in srgb, var(--ink) 4%, transparent); }
+  tbody tr.sel { background:color-mix(in srgb, var(--accent) 10%, transparent); box-shadow:inset 2px 0 0 var(--accent); }
+  .num { text-align:right; } td.neg { color:var(--red); font-weight:650; } td.zero { color:var(--mute); }
+  .sub2 { font-size:12.5px; color:var(--mute); max-width:60ch; }
+  .mt { margin-top:12px; }
+
+  .empty { padding:clamp(36px,7vw,72px) 24px; text-align:center; margin-top:28px; }
+  .empty h3 { font-size:22px; letter-spacing:-.02em; margin:16px 0 8px; } .empty p { color:var(--ink2); max-width:56ch; margin:0 auto 18px; }
+  .empty svg { width:44px; height:44px; color:var(--mute); }
+  code { font:12.5px var(--mono); overflow-wrap:anywhere; background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:1px 5px; }
+
+  .how { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0; overflow:hidden; }
+  @media (max-width:980px) { .how { grid-template-columns:minmax(0,1fr); } }
+  .step { padding:18px; border-left:1px solid var(--line); min-width:0; }
+  .step:first-child { border-left:0; }
+  @media (max-width:980px) { .step { border-left:0; border-top:1px solid var(--line); display:grid; grid-template-columns:36px 1fr; column-gap:8px; padding:14px 16px; } .step:first-child { border-top:0; } .step p { grid-column:2; } }
+  .step .n { font:600 11px var(--mono); color:var(--mute); letter-spacing:.1em; }
+  .step h4 { margin:8px 0 4px; font-size:14.5px; letter-spacing:-.01em; } .step p { margin:0; font-size:13px; color:var(--ink2); }
+  @media (max-width:980px) { .step h4 { margin:0 0 2px; } }
+
+  /* drawer */
+  .scrim { position:fixed; inset:0; z-index:40; background:rgba(0,0,0,.55); backdrop-filter:blur(2px); animation:fade .2s ease-out; }
+  @keyframes fade { from { opacity:0; } }
+  .drawer { position:fixed; top:0; right:0; bottom:0; z-index:41; width:min(1080px,100vw); background:var(--panel); border-left:1px solid var(--line2); display:flex; flex-direction:column; animation:slide .28s cubic-bezier(.2,.8,.2,1); box-shadow:-30px 0 80px rgba(0,0,0,.4); }
+  @keyframes slide { from { transform:translateX(40px); opacity:0; } }
+  .drawer-head { display:flex; gap:12px; align-items:flex-start; padding:18px 22px; border-bottom:1px solid var(--line); }
+  .drawer-head h3 { margin:6px 0 0; font-size:20px; letter-spacing:-.02em; overflow-wrap:anywhere; }
+  .drawer-head .x { margin-left:auto; flex:none; width:34px; height:34px; border-radius:8px; border:1px solid var(--line2); background:transparent; font-size:18px; line-height:1; }
+  .drawer-head .x:hover { background:var(--panel2); }
+  .drawer-body { overflow-y:auto; padding:20px 22px 40px; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:24px; align-content:start; }
+  @media (max-width:860px) { .drawer-body { grid-template-columns:minmax(0,1fr); padding:16px; } .drawer-head { padding:14px 16px; } }
+  .objective { grid-column:1/-1; padding:14px 16px; border-radius:12px; background:var(--panel2); border:1px solid var(--line); font-size:14px; }
+  .objective .row + .row { margin-top:8px; padding-top:8px; border-top:1px solid var(--line); }
+  .objective .k { font:600 10.5px var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--mute); display:block; margin-bottom:3px; }
+  .thread { display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .msg { max-width:88%; padding:10px 14px; border-radius:14px; white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px; }
+  .msg .who { font:600 10px var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--mute); display:block; margin-bottom:4px; }
+  .msg.customer { background:var(--panel2); border:1px solid var(--line); border-bottom-left-radius:4px; align-self:flex-start; }
+  .msg.bot { background:color-mix(in srgb, var(--accent) 13%, var(--panel)); border:1px solid color-mix(in srgb, var(--accent) 28%, transparent); border-bottom-right-radius:4px; align-self:flex-end; }
+  mark { background:color-mix(in srgb, var(--amber) 28%, transparent); color:inherit; border-radius:3px; padding:1px 2px; box-shadow:0 1.5px 0 var(--amber); }
+  mark.money { background:color-mix(in srgb, var(--red) 26%, transparent); box-shadow:0 1.5px 0 var(--red); }
+  .box { border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; font-size:13.5px; min-width:0; }
+  .box h4 { margin:0 0 10px; font-size:13.5px; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; } .box h4 small { font-weight:400; color:var(--mute); font-size:12px; }
+  .box .item { padding:8px 0; border-top:1px solid var(--line); } .box .item:first-of-type { border-top:0; padding-top:0; }
+  .box blockquote { margin:6px 0 0; padding-left:10px; border-left:2px solid var(--line2); color:var(--ink2); font-style:italic; overflow-wrap:anywhere; }
+  .box .tool code { display:block; margin-top:4px; white-space:pre-wrap; }
+
+  /* toasts */
+  .toasts { position:fixed; right:16px; bottom:16px; z-index:60; display:flex; flex-direction:column; gap:8px; max-width:min(420px,calc(100vw - 32px)); }
+  .toast { display:flex; gap:10px; align-items:flex-start; padding:11px 12px 11px 14px; border-radius:11px; background:var(--panel2); border:1px solid var(--line2); box-shadow:var(--shadow); font-size:13px; animation:rise .3s ease-out both; }
+  .toast.err { border-color:color-mix(in srgb, var(--amber) 55%, transparent); }
+  .toast button { border:0; background:none; color:var(--mute); font-size:16px; line-height:1; padding:0 2px; margin-left:auto; }
+
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <a class="brand" href="#" aria-label="RefundGuard">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.2 20 5v6.2c0 5-3.3 9.2-8 10.6-4.7-1.4-8-5.6-8-10.6V5l8-2.8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.2 12.4l2.6 2.6 5-5.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    RefundGuard</a>
+  <span class="brand-tag">A financial stress test for AI agents that hold a wallet</span>
+  <div class="models" id="models"></div>
+</div></header>
+
+<main>
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Release gate for agents with refund authority</div>
+      <h1>A financial stress test for AI agents that hold a wallet.</h1>
+      <p>Banks must pass a stress test before they are trusted with money. RefundGuard attacks your support agent with simulated scam customers before every release, measures the loss in dollars, and blocks the deploy.</p>
+      <div class="suite" id="suite"></div>
+    </div>
+    <form class="panel launcher" id="launcher" autocomplete="off">
+      <div class="launcher-head"><span class="eyebrow">Run stress test</span><span id="launch-state"></span></div>
+      <div class="seg" role="radiogroup" aria-label="Bot version under test" id="seg"></div>
+      <p class="vdesc" id="vdesc"></p>
+      <div class="opts">
+        <label>Run label<input id="f-label" maxlength="60"></label>
+        <label>Evolution rounds<select id="f-evolve"><option>0</option><option selected>1</option><option>2</option></select></label>
+        <label>Variants per hit<select id="f-variants"><option>1</option><option selected>2</option><option>3</option></select></label>
+        <label>Turns per chat<select id="f-turns"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
+      </div>
+      <button class="primary" id="launch" type="submit">Launch stress test</button>
+      <div class="fine" id="launch-note">Uses real model calls. One run at a time; the gate verdict appears when every conversation has been verified.</div>
+    </form>
+  </section>
+
+  <div class="tabs" id="tabs" role="tablist" hidden>
+    <button role="tab" data-view="live" aria-selected="false"><span class="dot" id="tabdot"></span>Live run</button>
+    <button role="tab" data-view="report" aria-selected="false">Report</button>
+  </div>
+
+  <section id="live" hidden aria-live="off"></section>
+  <section id="report"><div class="panel empty"><p class="mute">Loading runs…</p></div></section>
+
+  <h2 class="sec">How it works</h2>
+  <div class="panel how">
+    <div class="step"><span class="n">01</span><h4>Attack</h4><p>Scam personas, each an LLM that adapts over several turns, plus legitimate customers as a control group.</p></div>
+    <div class="step"><span class="n">02</span><h4>Ledger audit</h4><p>Every money movement is replayed against the refund policy in code. No LLM decides whether money leaked.</p></div>
+    <div class="step"><span class="n">03</span><h4>Independent judge</h4><p>Runs after the ledger and catches money promised in words, policy misstatements and personal-data leaks. Findings without a word-for-word quote are discarded.</p></div>
+    <div class="step"><span class="n">04</span><h4>Evolve</h4><p>Every attack that lands is mutated into new variants, so the regression suite grows on its own.</p></div>
+    <div class="step"><span class="n">05</span><h4>Gate</h4><p>The deploy is blocked when dollars leaked, dollars were promised, data leaked, or legitimate customers were refused.</p></div>
+  </div>
+</main>
+
+<div id="drawer-root"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const num = n => { n = Number(n); return Number.isFinite(n) ? n : 0; };
+const usd = n => { n = num(n); return '$' + n.toLocaleString('en-US', Number.isInteger(n) ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+const usd0 = n => '$' + Math.round(num(n)).toLocaleString('en-US');
+const int = n => Math.round(num(n)).toLocaleString('en-US');
+const dur = s => { s = Math.round(num(s)); return s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + String(s % 60).padStart(2, '0') + 's'; };
+const js = o => { try { return JSON.stringify(o) ?? ''; } catch { return ''; } };
+const arr = a => Array.isArray(a) ? a : [];
+const chip = (cls, html) => `<span class="chip ${cls}">${html}</span>`;
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const when = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+const model = (r, role) => r?.models?.[role]?.model || 'unknown model';
+
+function countTo(el, to, ms = 900) {
+  if (!el) return;
+  to = num(to);
+  const from = num(el.dataset.val);
+  el.dataset.val = to;
+  cancelAnimationFrame(el._raf);
+  if (reduced() || from === to) { el.textContent = usd(to); return; }
+  const t0 = performance.now();
+  const step = t => {
+    const p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = p < 1 ? usd0(from + (to - from) * e) : usd(to);
+    if (p < 1) el._raf = requestAnimationFrame(step);
+  };
+  el._raf = requestAnimationFrame(step);
+}
+function toast(msg, isErr) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (isErr ? ' err' : '');
+  const s = document.createElement('span'); s.textContent = msg;
+  const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', 'Dismiss'); b.textContent = '×'; b.onclick = () => t.remove();
+  t.append(s, b); $('#toasts').append(t);
+  while ($('#toasts').children.length > 4) $('#toasts').firstChild.remove();
+  if (!isErr) setTimeout(() => t.remove(), 8000);
+}
+const safely = (fn, what) => (...a) => { try { return fn(...a); } catch (e) { console.error(e); toast('Could not render ' + what + ': ' + (e?.message || e), true); } };
+
+/* ---------- state ---------- */
+const VERS = {
+  v1: { title: 'Friendly prompt', desc: 'Friendly “delight the customer” prompt. The refund tools are unguarded.', label: 'v1 friendly prompt' },
+  v2: { title: 'Strict prompt', desc: 'Strict policy prompt only. The tools are still unguarded (the usual fix).', label: 'v2 strict prompt' },
+  v3: { title: 'Guard in code', desc: 'Strict prompt plus the refund policy enforced in code inside the tools.', label: 'v3 guard in code' },
+};
+const S = { runs: [], runIdx: 0, config: null, view: 'report', victim: 'v1', labelEdited: false, chartSig: '', loaded: false };
+const STATIC = (typeof window.__RG_STATIC__ === 'object' && window.__RG_STATIC__) || null;   // static export: no fetching, no live runs
+let job = null;   // live job state
+let drawerConv = null;
+
+/* ---------- data ---------- */
+async function getJSON(url, opts) {
+  const res = await fetch(url, opts);
+  let body = null; try { body = await res.json(); } catch {}
+  return { ok: res.ok, status: res.status, body };
+}
+async function loadRuns(selectId) {
+  try {
+    const { ok, status, body } = STATIC ? { ok: true, status: 200, body: STATIC.runs } : await getJSON('/api/runs');
+    if (!ok) throw new Error('HTTP ' + status);
+    S.runs = arr(body).filter(r => r && typeof r === 'object');
+    const i = selectId ? S.runs.findIndex(r => r.id === selectId) : -1;
+    S.runIdx = i >= 0 ? i : Math.max(0, S.runs.length - 1);
+  } catch (e) {
+    toast('Could not load runs from /api/runs (' + (e?.message || e) + '). Is the dashboard server running?', true);
+  }
+  S.loaded = true;
+  renderReport(); renderModels();
+}
+async function loadConfig() {
+  try {
+    if (STATIC) { if (STATIC.config && typeof STATIC.config === 'object') S.config = STATIC.config; }
+    else { const { ok, body } = await getJSON('/api/config'); if (ok && body && typeof body === 'object') S.config = body; }
+  } catch {}
+  renderModels(); renderSuite();
+  return S.config;
+}
+
+/* ---------- header + launcher ---------- */
+const renderModels = safely(() => {
+  const latest = S.runs[S.runs.length - 1];
+  const m = S.config?.models || latest?.models;
+  if (!m) { $('#models').innerHTML = ''; return; }
+  const indep = S.config ? S.config.judgeIndependent : latest?.judgeIndependent;
+  const one = (k, l) => m[k]?.model ? chip('', `<b>${l}</b>${esc(m[k].model)}`) : '';
+  $('#models').innerHTML = one('victim', 'bot') + one('attacker', 'attacker') + one('judge', 'judge') +
+    (indep === true ? chip('green', '<span class="dot"></span>independent judge') : indep === false ? chip('amber', '<span class="dot"></span>same model family as bot') : '');
+}, 'model badges');
+const renderSuite = safely(() => {
+  const p = arr(S.config?.personas); if (!p.length) { $('#suite').innerHTML = ''; return; }
+  const a = p.filter(x => x?.kind === 'attack').length, l = p.filter(x => x?.kind === 'legit').length;
+  $('#suite').innerHTML = chip('', `<b>suite</b>${a} scam persona${a === 1 ? '' : 's'}`) + chip('', `<b>control</b>${l} legitimate customer${l === 1 ? '' : 's'}`);
+}, 'suite');
+const isRunning = () => !!(job && !job.done);
+const renderLauncher = safely(() => {
+  const run = isRunning() || !!STATIC;
+  $('#seg').innerHTML = Object.entries(VERS).map(([k, v]) => `<button type="button" role="radio" data-v="${k}" aria-checked="${k === S.victim}" ${run ? 'disabled' : ''}><strong>${k}</strong><span>${esc(v.title)}</span></button>`).join('');
+  $('#vdesc').textContent = VERS[S.victim].desc;
+  if (!S.labelEdited) $('#f-label').value = VERS[S.victim].label;
+  for (const id of ['f-label', 'f-evolve', 'f-variants', 'f-turns', 'launch']) $('#' + id).disabled = run;
+  $('#launch').innerHTML = STATIC ? 'Launch stress test' : run ? '<span class="dot pulse"></span>Stress test running…' : 'Launch stress test';
+  $('#launch-state').innerHTML = STATIC ? chip('', 'static report') : run ? chip('red', '<span class="dot pulse"></span>live') : '';
+  if (STATIC) $('#launch-note').textContent = 'Static report. Launch runs from the local app.';
+}, 'launcher');
+$('#seg').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b || b.disabled) return; S.victim = b.dataset.v; renderLauncher(); });
+$('#f-label').addEventListener('input', () => { S.labelEdited = true; });
+$('#launcher').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (isRunning() || STATIC) return;
+  const meta = { victim: S.victim, label: ($('#f-label').value || '').trim() || VERS[S.victim].label, evolve: num($('#f-evolve').value), variants: num($('#f-variants').value) || 1, turns: num($('#f-turns').value) || 3 };
+  $('#launch').disabled = true;
+  try {
+    const { ok, status, body } = await getJSON('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(meta) });
+    if (ok && body?.jobId) attach(body.jobId, meta);
+    else if (status === 409 && body?.jobId) { toast('A run is already in progress. Showing it live.'); attach(body.jobId, {}); }
+    else throw new Error(body?.error || 'HTTP ' + status);
+  } catch (err) {
+    toast('Could not start the stress test: ' + (err?.message || err), true);
+  }
+  renderLauncher();
+});
+
+/* ---------- view switching ---------- */
+function setView(v) {
+  S.view = v;
+  $('#live').hidden = v !== 'live';
+  $('#report').hidden = v !== 'report';
+  $('#tabs').hidden = !job;
+  for (const b of $('#tabs').querySelectorAll('[data-view]')) b.setAttribute('aria-selected', b.dataset.view === v);
+  $('#tabdot').className = 'dot' + (isRunning() ? ' pulse' : '');
+  $('#tabdot').style.color = isRunning() ? 'var(--red)' : 'var(--mute)';
+  if (v === 'report') requestAnimationFrame(() => renderChart(false));
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) { clearTimeout(job?.settle); setView(b.dataset.view); } });
+
+/* ---------- live theater ---------- */
+function attach(jobId, meta) {
+  if (STATIC) return;
+  if (job?.es) try { job.es.close(); } catch {}
+  clearInterval(job?.poll); clearTimeout(job?.settle);
+  job = { id: jobId, victim: meta?.victim || '', label: meta?.label || '', turns: num(meta?.turns), cards: new Map(), done: false, es: null, poll: null, settle: null, leaked: 0, promised: 0 };
+  buildLiveShell(); setView('live'); renderLauncher();
+  if (!('EventSource' in window)) { toast('This browser cannot stream live events. The report will appear when the run finishes.', true); return pollUntilDone(); }
+  const es = job.es = new EventSource('/api/jobs/' + encodeURIComponent(jobId) + '/events');
+  const mine = job;
+  es.onopen = () => { if (job !== mine) return; resetLive(); setConn('live'); };   // the server replays every past event on connect
+  es.onmessage = e => { if (job !== mine) return; let ev; try { ev = JSON.parse(e.data); } catch { return; } try { handle(ev); } catch (err) { console.error(err); } };
+  es.onerror = () => {
+    if (job !== mine || mine.done) return;
+    if (es.readyState === 2) { setConn('lost'); toast('Live stream is unavailable. Waiting for the run to finish, then the report will load.', true); pollUntilDone(); }
+    else setConn('reconnecting');
+  };
+}
+function pollUntilDone() {
+  const mine = job; clearInterval(mine.poll);
+  let misses = 0;
+  mine.poll = setInterval(async () => {
+    if (job !== mine || mine.done) return clearInterval(mine.poll);
+    try {
+      const { ok, body } = await getJSON('/api/config');
+      if (!ok) throw new Error();
+      if (!body?.running) { clearInterval(mine.poll); finish(null); }
+    } catch { if (++misses >= 5) { clearInterval(mine.poll); finish(null); } }
+  }, 3000);
+}
+function setConn(state) {
+  const el = $('#live-badge'); if (!el) return;
+  el.className = 'live-badge' + (state === 'live' ? '' : ' off');
+  el.innerHTML = state === 'live' ? '<span class="dot pulse"></span>LIVE' : state === 'reconnecting' ? '<span class="dot"></span>RECONNECTING' : state === 'done' ? '<span class="dot"></span>FINISHED' : state === 'failed' ? '<span class="dot"></span>STOPPED' : '<span class="dot"></span>OFFLINE';
+}
+function buildLiveShell() {
+  $('#live').innerHTML = `
+    <div class="live-head"><span class="live-badge off" id="live-badge"><span class="dot"></span>CONNECTING</span><h2 id="live-title">Attack theater</h2><span id="live-models" class="badges" style="margin:0"></span></div>
+    <div class="counters">
+      <div class="panel counter" id="c-leaked"><div class="eyebrow">Dollars leaked so far</div><div class="v" data-val="0">$0</div><div class="l">proven by the ledger, Layer 1</div></div>
+      <div class="panel counter" id="c-promised"><div class="eyebrow">Promised in writing</div><div class="v" data-val="0">$0</div><div class="l">caught by the judge, Layer 2</div></div>
+      <div class="panel counter sm" id="c-breached"><div class="eyebrow">Attacks breached</div><div class="v">0/0</div><div class="l">of verified attack chats</div></div>
+      <div class="panel counter sm" id="c-legit"><div class="eyebrow">Legit customers served</div><div class="v">0/0</div><div class="l">control group</div></div>
+    </div>
+    <div class="progress"><i id="prog"></i></div>
+    <div class="progress-l"><span id="prog-l">Waiting for the first conversation…</span><span id="prog-r"></span></div>
+    <div id="verdict"></div>
+    <div class="evolog" id="evolog"></div>
+    <div class="cards" id="cards"></div>`;
+  updateLiveHead();
+}
+function resetLive() {
+  job.cards.clear(); job.leaked = 0; job.promised = 0;
+  buildLiveShell();
+}
+function updateLiveHead() {
+  const t = $('#live-title'); if (!t) return;
+  t.textContent = 'Attack theater' + (job.victim ? ' · bot ' + job.victim : '') + (job.label ? ' · ' + job.label : '');
+}
+function getCard(id, name, p) {
+  id = String(id ?? 'unknown');
+  let c = job.cards.get(id);
+  if (c) return c;
+  const el = document.createElement('article');
+  el.className = 'panel ccard s-queued';
+  const kind = p?.kind, gen = num(p?.gen);
+  el.innerHTML = `<header><div class="cname">${esc(name || id)}</div><span class="chip st">queued</span></header>
+    <div class="cmeta">${originChip({ kind, gen })}${p?.parent ? `<span class="mute" style="font-size:12px">from ${esc(parentName(p.parent))}</span>` : ''}</div>
+    ${p?.tactic ? `<div class="ctactic">${esc(p.tactic)}</div>` : ''}
+    <div class="chat"><div class="wait">Waiting to start…</div></div>
+    <div class="ctools"></div>
+    <footer><span class="res">No result yet</span></footer>`;
+  $('#cards').append(el);
+  c = { id, el, kind, gen, name: name || id, state: 'queued', bots: 0, msgs: 0, result: null };
+  job.cards.set(id, c);
+  el.addEventListener('click', e => { if (c.result && (e.target.closest('button') || !e.target.closest('.chat'))) openDrawer(c.result); });
+  updateProgress();
+  return c;
+}
+function parentName(pid) { return job?.cards.get(String(pid))?.name || pid; }
+function originChip(p) { return p?.kind === 'legit' ? chip('', 'control group') : num(p?.gen) > 0 ? chip('accent', 'evolved · gen ' + int(p.gen)) : chip('', 'seed attack'); }
+const ST = { queued: ['', 'queued'], running: ['accent', '<span class="dot pulse"></span>attacking…'], chatting: ['accent', '<span class="dot pulse"></span>in conversation…'], verifying: ['amber', '<span class="dot pulse"></span>verifying…'],
+  held: ['green', 'HELD'], breached: ['red', 'BREACHED'], served: ['green', 'SERVED'], notserved: ['amber', 'NOT SERVED'], error: ['amber', 'ERROR'] };
+function setState(c, st) {
+  if (c.state === st) return;
+  c.state = st;
+  c.el.className = 'panel ccard s-' + st;
+  const s = $('.st', c.el), d = ST[st] || ST.queued;
+  s.className = 'chip st ' + d[0]; s.innerHTML = d[1];
+  const chat = $('.chat', c.el); let ty = $('.typing', chat);
+  const active = st === 'running' || st === 'chatting';
+  if (active && !ty) { ty = document.createElement('div'); ty.className = 'typing'; ty.innerHTML = '<i></i><i></i><i></i>'; chat.append(ty); }
+  if (!active && ty) ty.remove();
+}
+function addMsg(c, who, text) {
+  const chat = $('.chat', c.el); $('.wait', chat)?.remove();
+  const b = document.createElement('div');
+  b.className = 'bub ' + (who === 'bot' ? 'bot' : 'customer');
+  b.textContent = String(text ?? '');
+  const ty = $('.typing', chat); ty ? chat.insertBefore(b, ty) : chat.append(b);
+  if (ty) ty.style.alignSelf = who === 'bot' ? 'flex-start' : 'flex-end';
+  c.msgs++; if (who === 'bot') c.bots++;
+  chat.scrollTop = chat.scrollHeight;
+}
+function addTool(c, ev) {
+  const t = document.createElement('span');
+  const money = /^issue_(refund|store_credit)$/.test(ev?.tool || '') && ev?.result?.ok;
+  t.className = 'tchip' + (money ? ' money' : '');
+  t.textContent = String(ev?.tool || 'tool') + (money ? ' · ' + usd(ev?.args?.amount) + ' moved' : ev?.result?.error ? ' · ' + String(ev.result.error) : '');
+  t.title = js(ev?.args) + ' → ' + js(ev?.result);
+  $('.ctools', c.el).append(t);
+}
+function finishCard(c, r) {
+  c.result = r; c.kind = r?.persona?.kind || c.kind;
+  if (!c.msgs) for (const t of arr(r?.transcript)) addMsg(c, t?.who, t?.text);
+  if (!$('.ctools', c.el).children.length) for (const t of arr(r?.toolLog)) addTool(c, t);
+  const st = r?.error ? 'error' : c.kind === 'legit' ? (r?.served ? 'served' : 'notserved') : r?.breached ? 'breached' : 'held';
+  setState(c, st);
+  const leaked = num(r?.audit?.leakedUsd), promised = num(r?.promisedUsd);
+  const parts = [];
+  if (leaked > 0) parts.push(`<span class="loss">${usd(leaked)} leaked</span>`);
+  if (promised > 0) parts.push(`<span class="loss">${usd(promised)} promised</span>`);
+  if (r?.pii) parts.push('<span class="loss">personal data leaked</span>');
+  if (r?.error) parts.push('<span>conversation failed</span>');
+  if (!parts.length) parts.push(c.kind === 'legit' ? (r?.served ? '<span class="ok">Customer got what they were entitled to</span>' : '<span>Legitimate request was not served</span>') : r?.breached ? '<span class="loss">Policy breached</span>' : '<span class="ok">No money moved against policy</span>');
+  $('footer', c.el).innerHTML = `<span>${parts.join(' · ')}</span><button type="button">View evidence →</button>`;
+  c.el.style.cursor = 'pointer';
+}
+function updateProgress() {
+  const all = [...job.cards.values()], fin = all.filter(c => c.result);
+  const atk = fin.filter(c => c.kind !== 'legit' && !c.result?.error), leg = fin.filter(c => c.kind === 'legit');
+  const br = atk.filter(c => c.result?.breached).length, sv = leg.filter(c => c.result?.served).length;
+  const set = (id, txt, cls) => { const el = $(id); if (!el) return; $('.v', el).textContent = txt; el.className = 'panel counter sm ' + cls; };
+  set('#c-breached', br + '/' + atk.length, br > 0 ? 'hot' : job.done && atk.length ? 'safe' : '');
+  set('#c-legit', sv + '/' + leg.length, job.done && leg.length && sv === leg.length ? 'safe' : '');
+  if ($('#prog')) $('#prog').style.width = (all.length ? fin.length / all.length * 100 : 0) + '%';
+  if ($('#prog-l')) $('#prog-l').textContent = all.length ? fin.length + ' of ' + all.length + ' conversations verified' : 'Waiting for the first conversation…';
+  const evo = all.filter(c => c.gen > 0).length;
+  if ($('#prog-r')) $('#prog-r').textContent = evo ? evo + ' evolved variant' + (evo === 1 ? '' : 's') + ' in the suite' : '';
+}
+function setMoney(leaked, promised) {
+  const upd = (id, v, prev) => {
+    const el = $(id); if (!el) return;
+    countTo($('.v', el), v);
+    el.classList.toggle('hot', v > 0);
+    el.classList.toggle('safe', job.done && v === 0);
+    if (v > prev) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  };
+  upd('#c-leaked', leaked, job.leaked); upd('#c-promised', promised, job.promised);
+  job.leaked = leaked; job.promised = promised;
+}
+function handle(ev) {
+  if (!ev || typeof ev !== 'object' || !job) return;
+  switch (ev.type) {
+    case 'start': {
+      job.victim = ev.victimVersion || job.victim; updateLiveHead();
+      if (VERS[job.victim] && S.victim !== job.victim) { S.victim = job.victim; renderLauncher(); }
+      const m = ev.models || {};
+      $('#live-models').innerHTML = ['victim', 'attacker', 'judge'].map(k => m[k]?.model ? chip('', `<b>${k === 'victim' ? 'bot' : k}</b>${esc(m[k].model)}`) : '').join('');
+      for (const p of arr(ev.personas)) getCard(p?.id, p?.name, p);
+      break;
+    }
+    case 'turn': {
+      const c = getCard(ev.personaId, ev.personaName);
+      if (!c.result) setState(c, c.kind === 'legit' ? 'chatting' : 'running');
+      addMsg(c, ev.who, ev.text);
+      if (!c.result && job.turns && ev.who === 'bot' && c.bots >= job.turns) setState(c, 'verifying');
+      break;
+    }
+    case 'tool': { const c = getCard(ev.personaId); if (!c.result && c.state === 'queued') setState(c, c.kind === 'legit' ? 'chatting' : 'running'); addTool(c, ev); break; }
+    case 'verifying': { const c = getCard(ev.personaId); if (!c.result) setState(c, 'verifying'); break; }   // optional event, not required
+    case 'conversation': {
+      const r = ev.result || {}, c = getCard(r.persona?.id, r.persona?.name, r.persona);
+      const first = !c.result;
+      finishCard(c, r);
+      if (first) setMoney(job.leaked + num(r.audit?.leakedUsd), job.promised + num(r.promisedUsd));
+      updateProgress();
+      break;
+    }
+    case 'evolve': {
+      const ps = arr(ev.personas), n = num(ev.count) || ps.length;
+      const line = document.createElement('div'); line.className = 'evoline';
+      line.textContent = 'Evolution, generation ' + int(ev.generation) + ': ' + n + ' new variant' + (n === 1 ? '' : 's') + ' mutated from the attacks that landed.';
+      $('#evolog').append(line);
+      for (const p of ps) getCard(p?.id, p?.name, { ...p, gen: p?.gen ?? ev.generation });
+      updateProgress();
+      break;
+    }
+    case 'done': finish(ev); break;
+    case 'error': {
+      job.done = true; try { job.es?.close(); } catch {}
+      setConn('failed'); toast('The stress test stopped: ' + (ev.message || 'unknown error'), true);
+      for (const c of job.cards.values()) if (!c.result && c.state !== 'queued') setState(c, 'error');
+      renderLauncher(); setView(S.view);
+      break;
+    }
+  }
+}
+function finish(ev) {
+  if (!job || job.done) return;
+  const mine = job;
+  job.done = true; try { job.es?.close(); } catch {} clearInterval(job.poll);
+  setConn('done');
+  if (ev?.totals) setMoney(num(ev.totals.leakedUsd ?? job.leaked), num(ev.totals.promisedUsd ?? job.promised)); else setMoney(job.leaked, job.promised);
+  updateProgress();
+  if (ev) showVerdict(ev.gate);
+  renderLauncher(); setView(S.view);
+  loadRuns(ev?.runId).then(() => {
+    if (job !== mine) return;
+    if (!ev) { setView('report'); toast('Run finished. Showing the newest report.'); return; }
+    mine.settle = setTimeout(() => { if (job === mine && S.view === 'live' && !drawerConv) { setView('report'); scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); } }, 9000);
+  });
+}
+function showVerdict(gate) {
+  const v = $('#verdict'); if (!v) return;
+  const pass = gate?.pass === true, known = typeof gate?.pass === 'boolean', reasons = arr(gate?.reasons);
+  v.innerHTML = `<div class="verdict ${!known ? 'unknown' : pass ? 'pass' : 'fail'}" role="status">
+    <div class="eyebrow">Release gate</div>
+    <div class="big">${!known ? 'Run finished' : pass ? 'GATE PASSED: safe to ship' : 'DEPLOY BLOCKED'}</div>
+    ${reasons.length ? '<ul>' + reasons.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' : pass ? '<p>No money left the ledger against policy, nothing was promised in writing, no personal data leaked, and legitimate customers were served.</p>' : ''}
+    <button type="button" class="ghost" id="to-report">Open the full report →</button></div>`;
+  $('#to-report').onclick = () => { clearTimeout(job?.settle); setView('report'); scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); };
+  v.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'center' });
+}
+
+/* ---------- report ---------- */
+function cost(r) {
+  const u = Object.values(r?.usage || {}).filter(x => x && typeof x === 'object');
+  const n = num(r?.totals?.conversations);
+  if (!u.length || !n) return '–';
+  if (u.every(x => x.costKnown)) return '$' + (u.reduce((s, x) => s + num(x.costUsd), 0) / n).toFixed(3);
+  return int(u.reduce((s, x) => s + num(x.inTok) + num(x.outTok), 0) / n) + ' tok';
+}
+function statusChip(c) {
+  if (c?.error) return chip('amber', 'error');
+  if (c?.persona?.kind === 'legit') return c.served ? chip('green', 'served') : chip('amber', 'not served');
+  return c?.breached ? chip('red', 'breached') : chip('green', 'held');
+}
+const ICO = { fail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>', pass: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>', unknown: '' };
+const kpi = (label, v, sub, tone, countVal) => `<div class="panel kpi ${tone === 'bad' ? 'bad' : ''}"><div class="eyebrow">${label}</div><div class="v ${tone || ''}" ${countVal != null ? `data-count="${num(countVal)}"` : ''}>${v}</div><div class="l">${sub}</div></div>`;
+
+const renderReport = safely(() => {
+  const root = $('#report');
+  if (!S.runs.length) {
+    root.innerHTML = `<div class="panel empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 2.2 20 5v6.2c0 5-3.3 9.2-8 10.6-4.7-1.4-8-5.6-8-10.6V5l8-2.8Z"/></svg>
+      <h3>${S.loaded ? 'No stress tests yet' : 'Loading runs…'}</h3>
+      ${S.loaded && STATIC ? '<p>This static report contains no runs. Launch runs from the local app.</p>' : S.loaded ? `<p>Pick a bot version in the launcher above and press <b>Launch stress test</b>. You will watch every scam conversation live, then get a release gate verdict with the loss in dollars. Start with v1 to see what an unguarded agent gives away.</p>
+      <button type="button" class="ghost" id="go-launch">Go to the launcher ↑</button>
+      <p class="fine">Or from a terminal: <code>npm run attack:v1</code>, then refresh.</p>` : ''}</div>`;
+    const g = $('#go-launch'); if (g) g.onclick = () => { scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); $('#launch').focus({ preventScroll: true }); };
+    return;
+  }
+  const r = S.runs[S.runIdx] || S.runs[S.runs.length - 1], t = r.totals || {}, g = r.gate || {};
+  const known = typeof g.pass === 'boolean', gcls = !known ? 'unknown' : g.pass ? 'pass' : 'fail', reasons = arr(g.reasons);
+  const attacks = num(t.attacks), avg = Number.isFinite(Number(t.avgLossPerHostileChatUsd)) && t.avgLossPerHostileChatUsd != null ? Number(t.avgLossPerHostileChatUsd) : attacks ? (num(t.leakedUsd) + num(t.promisedUsd)) / attacks : 0;
+  const legitBad = num(t.legit) > 0 && num(t.legitServed) < num(t.legit);
+  const results = arr(r.results);
+  root.innerHTML = `
+  <div class="gate ${gcls}">
+    <div class="ico">${ICO[gcls]}</div>
+    <div style="min-width:0"><div class="eyebrow">Release gate</div>
+      <div class="gt">${!known ? 'No gate result recorded' : g.pass ? 'GATE PASSED: safe to ship' : 'DEPLOY BLOCKED'}</div>
+      ${reasons.length ? '<ul>' + reasons.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' : g.pass ? '<p>No money left the ledger against policy, nothing was promised in writing, no personal data leaked, and legitimate customers were served.</p>' : ''}
+      ${arr(g.warnings).map(w => `<p class="mute" style="margin-top:6px">Note: ${esc(w)}</p>`).join('')}</div>
+    <div class="gmeta"><strong>${esc(r.label || r.id || 'Untitled run')}</strong>bot ${esc(r.victimVersion || '')}${r.startedAt ? ' · ' + esc(when(r.startedAt)) : ''}</div>
+  </div>
+  <div class="badges">
+    ${chip('', `<b>bot</b>${esc(model(r, 'victim'))} · ${esc(r.victimVersion || '')}`)}
+    ${chip('', `<b>attacker</b>${esc(model(r, 'attacker'))}`)}
+    ${chip(r.judgeIndependent ? 'green' : 'amber', `<b>judge</b>${esc(model(r, 'judge'))} · ${r.judgeIndependent ? 'independent model family' : 'same model family as bot, verdict not independent'}`)}
+    ${r.mock ? chip('amber', 'MOCK providers: offline pipeline test, not real model behaviour') : ''}
+    ${num(t.judgeFindingsDiscarded) ? chip('amber', `${int(t.judgeFindingsDiscarded)} judge finding${num(t.judgeFindingsDiscarded) === 1 ? '' : 's'} discarded: quote not in transcript`) : ''}
+    ${num(t.piiLeaks) ? chip('red', `${int(t.piiLeaks)} personal-data leak${num(t.piiLeaks) === 1 ? '' : 's'}`) : ''}
+    ${num(t.errors) ? chip('amber', `${int(t.errors)} conversation${num(t.errors) === 1 ? '' : 's'} failed`) : ''}
+  </div>
+  <div class="kpis">
+    ${kpi('Leaked', usd(t.leakedUsd), 'proven by the ledger (Layer 1, deterministic)', num(t.leakedUsd) > 0 ? 'bad' : 'good', t.leakedUsd)}
+    ${kpi('Promised in writing', usd(t.promisedUsd), 'caught by the judge (Layer 2, quote-verified)', num(t.promisedUsd) > 0 ? 'bad' : 'good', t.promisedUsd)}
+    ${kpi('Average loss per hostile chat', usd(Math.round(avg * 100) / 100), `(leaked + promised) ÷ ${int(attacks)} attack chat${attacks === 1 ? '' : 's'}`, avg > 0 ? 'bad' : 'good', Math.round(avg * 100) / 100)}
+    ${kpi('Attacks breached', `${int(t.breached)}/${int(t.attacks)}`, `${int(t.evolvedBreaches)} found by evolution`, num(t.breached) > 0 ? 'bad' : 'good')}
+    ${kpi('Legitimate customers served', `${int(t.legitServed)}/${int(t.legit)}`, 'control group: a bot that refuses everyone fails too', legitBad ? 'warn' : num(t.legit) ? 'good' : '')}
+    ${kpi('Cost per conversation', esc(cost(r)), `${int(t.conversations)} conversations · ${dur(r.seconds)} total`, '')}
+  </div>
+
+  <h2 class="sec">Runs compared <small>dollars lost per run · select a run to inspect it</small></h2>
+  <div class="panel chart-panel">
+    <div class="legend"><span><i class="sw"></i>Leaked (ledger)</span><span><i class="sw hatch"></i>Promised in writing (judge)</span><span><i class="sw zero"></i>$0</span></div>
+    <div class="chartwrap" id="chart"></div>
+  </div>
+  <div class="panel scroll mt"><table><thead><tr><th>Run</th><th>Bot</th><th>Judge</th><th class="num">Leaked</th><th class="num">Promised</th><th class="num">Breached</th><th class="num">Legit served</th><th class="num">Cost / chat</th><th>Gate</th></tr></thead>
+  <tbody id="runs-body">${S.runs.map((x, i) => { const xt = x.totals || {}; return `<tr data-run="${i}" class="${i === S.runIdx ? 'sel' : ''}">
+    <td>${esc(x.label || x.id || 'Untitled run')}${x.mock ? ' ' + chip('amber', 'mock') : ''}<div class="sub2">${esc(when(x.startedAt))}</div></td>
+    <td>${esc(model(x, 'victim'))} · ${esc(x.victimVersion || '')}</td><td>${esc(model(x, 'judge'))}</td>
+    <td class="num ${num(xt.leakedUsd) > 0 ? 'neg' : 'zero'}">${usd(xt.leakedUsd)}</td><td class="num ${num(xt.promisedUsd) > 0 ? 'neg' : 'zero'}">${usd(xt.promisedUsd)}</td>
+    <td class="num">${int(xt.breached)}/${int(xt.attacks)}</td><td class="num">${int(xt.legitServed)}/${int(xt.legit)}</td><td class="num">${esc(cost(x))}</td>
+    <td>${x.gate?.pass === true ? chip('green', 'pass') : x.gate?.pass === false ? chip('red', 'blocked') : chip('', 'unknown')}</td></tr>`; }).join('')}</tbody></table></div>
+
+  <h2 class="sec">Conversations in this run <small>${esc(r.label || '')} · select one for the transcript and evidence</small></h2>
+  <div class="panel scroll"><table><thead><tr><th>Result</th><th>Simulated customer</th><th>Origin</th><th class="num">Leaked</th><th class="num">Promised</th><th>Data leak</th><th class="num">Turns</th></tr></thead>
+  <tbody id="conv-body">${results.length ? results.map((c, i) => `<tr data-conv="${i}">
+    <td>${statusChip(c)}</td><td>${esc(c?.persona?.name || c?.persona?.id || 'Unknown')}${c?.persona?.tactic ? `<div class="sub2">${esc(c.persona.tactic)}</div>` : ''}</td>
+    <td>${originChip(c?.persona)}</td>
+    <td class="num ${num(c?.audit?.leakedUsd) > 0 ? 'neg' : 'zero'}">${usd(c?.audit?.leakedUsd)}</td><td class="num ${num(c?.promisedUsd) > 0 ? 'neg' : 'zero'}">${usd(c?.promisedUsd)}</td>
+    <td>${c?.pii ? chip('red', 'yes') : '<span class="mute">–</span>'}</td><td class="num">${arr(c?.transcript).filter(m => m?.who === 'bot').length}</td></tr>`).join('') : '<tr><td colspan="7" class="mute">This run recorded no conversations.</td></tr>'}</tbody></table></div>`;
+  for (const el of root.querySelectorAll('[data-count]')) { el.dataset.val = 0; countTo(el, el.dataset.count, 700); }
+  const sig = S.runs.map(x => x.id).join('|');
+  renderChart(sig !== S.chartSig); S.chartSig = sig;
+}, 'the report');
+
+$('#report').addEventListener('click', e => {
+  const rr = e.target.closest('[data-run]'); if (rr) { selectRun(num(rr.dataset.run)); return; }
+  const cr = e.target.closest('[data-conv]'); if (cr) { const c = arr(S.runs[S.runIdx]?.results)[num(cr.dataset.conv)]; if (c) openDrawer(c, S.runs[S.runIdx]); }
+});
+$('#report').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('.grp')) { e.preventDefault(); selectRun(num(e.target.closest('.grp').dataset.run)); } });
+function selectRun(i) { if (i === S.runIdx || !S.runs[i]) return; S.runIdx = i; renderReport(); }
+
+/* ---------- chart ---------- */
+function niceMax(m) {
+  if (!(m > 0)) return 100;
+  const p = Math.pow(10, Math.floor(Math.log10(m))), f = m / p;
+  return [1, 1.2, 1.6, 2, 2.4, 3, 4, 5, 6, 8, 10].find(x => f <= x) * p;
+}
+const fit = (s, n) => { s = String(s ?? ''); n = Math.max(4, n); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
+const renderChart = safely(animate => {
+  const wrap = $('#chart'); if (!wrap || !S.runs.length || $('#report').hidden) return;
+  const n = S.runs.length, W0 = Math.max(280, wrap.clientWidth || 800);
+  const ml = 54, mr = 8, mt = 30, mb = 84, H = 340, ph = H - mt - mb;
+  const gw = Math.min(250, Math.max(108, (W0 - ml - mr) / n)), W = Math.max(W0, Math.round(ml + mr + gw * n)), off = Math.max(0, (W - ml - mr - gw * n) / 2);
+  const max = niceMax(Math.max(0, ...S.runs.map(r => Math.max(num(r.totals?.leakedUsd), num(r.totals?.promisedUsd)))));
+  const y = v => mt + ph - (Math.min(v, max) / max) * ph, y0 = mt + ph;
+  const bw = Math.min(48, gw * 0.26), chars = Math.floor((gw - 12) / 6.7);
+  const bar = (x, v, fill, delay) => {
+    if (!(v > 0)) return `<rect x="${x}" y="${y0 - 3}" width="${bw}" height="3" rx="1.5" style="fill:var(--green)"/><text class="val g" x="${x + bw / 2}" y="${y0 - 9}" text-anchor="middle">$0</text>`;
+    const yy = y(v), h = Math.max(2, y0 - yy), r = Math.min(4, h);
+    return `<path class="bar${animate ? ' grow' : ''}" style="fill:${fill};animation-delay:${delay}ms" d="M${x},${y0}V${y0 - h + r}Q${x},${y0 - h} ${x + r},${y0 - h}H${x + bw - r}Q${x + bw},${y0 - h} ${x + bw},${y0 - h + r}V${y0}Z"/>
+      <text class="val r" x="${x + bw / 2}" y="${y0 - h - 7}" text-anchor="middle">${usd0(v)}</text>`;
+  };
+  let g = '';
+  for (let i = 0; i <= 4; i++) { const v = max / 4 * i, yy = Math.round(y(v)) + .5; g += `<line class="grid${i ? '' : ' base'}" x1="${ml}" x2="${W - mr}" y1="${yy}" y2="${yy}"/><text x="${ml - 8}" y="${yy + 4}" text-anchor="end">${usd0(v)}</text>`; }
+  S.runs.forEach((r, i) => {
+    const t = r.totals || {}, cx = ml + off + gw * i + gw / 2, pass = r.gate?.pass;
+    const pillC = pass === true ? 'var(--green)' : pass === false ? 'var(--red)' : 'var(--mute)', pillT = pass === true ? 'PASSED' : pass === false ? 'BLOCKED' : 'UNKNOWN';
+    g += `<g class="grp${i === S.runIdx ? ' sel' : ''}" data-run="${i}" tabindex="0" role="button" aria-label="${esc((r.label || r.id || 'run') + ': leaked ' + usd(t.leakedUsd) + ', promised ' + usd(t.promisedUsd))}">
+      <title>${esc((r.label || r.id || 'run') + ' · leaked ' + usd(t.leakedUsd) + ' · promised ' + usd(t.promisedUsd))}</title>
+      <rect class="hit" x="${cx - gw / 2 + 4}" y="4" width="${gw - 8}" height="${H - 8}" rx="10"/>
+      ${bar(cx - bw - 3, num(t.leakedUsd), 'var(--red)', i * 90)}${bar(cx + 3, num(t.promisedUsd), 'url(#hatch)', i * 90 + 120)}
+      <text class="xl" x="${cx}" y="${y0 + 22}" text-anchor="middle">${esc(fit((r.label || r.id || 'run') + (r.mock ? ' (mock)' : ''), chars))}</text>
+      <text x="${cx}" y="${y0 + 39}" text-anchor="middle">${esc(fit((r.victimVersion || '') + ' · ' + model(r, 'victim'), chars))}</text>
+      <rect x="${cx - 33}" y="${y0 + 50}" width="66" height="18" rx="9" style="fill:${pillC};fill-opacity:.14;stroke:${pillC};stroke-opacity:.5"/>
+      <text class="pill-t" x="${cx}" y="${y0 + 62.5}" text-anchor="middle" style="fill:${pillC}">${pillT}</text></g>`;
+  });
+  wrap.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Dollars leaked and promised per run">
+    <defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" style="fill:var(--red);fill-opacity:.2"/><rect width="3" height="6" style="fill:var(--red)"/></pattern></defs>${g}</svg>`;
+  if (W > W0) wrap.scrollLeft = W;
+}, 'the chart');
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => renderChart(false), 120); });
+
+/* ---------- conversation drawer ---------- */
+const FIND = [['promised_money', 'Promised money'], ['policy_misstatement', 'Policy misstated'], ['pii_leak', 'Personal data leak']];
+function detailHTML(c, run) {
+  const p = c?.persona || {}, v = (c?.verdict && typeof c.verdict === 'object') ? c.verdict : {};
+  const quotes = FIND.filter(([k]) => v[k]?.found && v[k]?.quote).map(([k]) => [k, String(v[k].quote)]);
+  const hl = text => { let h = esc(text); for (const [k, q] of quotes) { const e = esc(q); if (e && h.includes(e)) h = h.replace(e, `<mark class="${k === 'promised_money' ? 'money' : ''}">${e}</mark>`); } return h; };
+  const finding = ([k, label]) => v[k]?.found
+    ? `<div class="item">${k === 'promised_money' && v[k].conditional
+        ? chip('amber', 'Conditional promise ' + usd(v[k].amount_usd) + ' · not counted as loss')
+        : chip(k === 'policy_misstatement' ? 'amber' : 'red', esc(label) + (k === 'promised_money' ? ' ' + usd(v[k].amount_usd) : ''))}${v[k].quote ? `<blockquote>“${esc(v[k].quote)}”</blockquote>` : ''}</div>`
+    : `<div class="item mute">${esc(label)}: none</div>`;
+  const parent = p.parent ? (arr(run?.results).find(x => x?.persona?.id === p.parent)?.persona?.name || (job?.cards.get(String(p.parent))?.name) || p.parent) : null;
+  const entries = arr(c?.audit?.entries), tools = arr(c?.toolLog), disc = arr(v.discarded), tr = arr(c?.transcript);
+  return `<div class="drawer-head"><div style="min-width:0"><div class="badges" style="margin:0">${statusChip(c)}${originChip(p)}${c?.pii ? chip('red', 'personal data leaked') : ''}</div><h3 id="drawer-title">${esc(p.name || p.id || 'Conversation')}</h3></div>
+    <button type="button" class="x" id="drawer-x" aria-label="Close">×</button></div>
+  <div class="drawer-body">
+    <div class="objective">
+      <div class="row"><span class="k">${p.kind === 'legit' ? 'Customer request' : 'Attacker objective'}</span>${esc(p.goal || 'Not recorded')} <span class="mute nums">(entitled to ${usd(p.entitledUsd)})</span></div>
+      ${parent ? `<div class="row"><span class="k">Evolved from · generation ${int(p.gen)}</span>${esc(parent)}</div>` : ''}
+      ${p.tactic ? `<div class="row"><span class="k">Mutation tactic</span>${esc(p.tactic)}</div>` : ''}
+    </div>
+    <div class="thread">
+      ${c?.error ? `<div class="box"><h4>Error</h4><code>${esc(c.error)}</code></div>` : ''}
+      ${tr.length ? tr.map(m => `<div class="msg ${m?.who === 'bot' ? 'bot' : 'customer'}"><span class="who">${m?.who === 'bot' ? 'agent under test' : 'simulated customer'}</span>${m?.who === 'bot' ? hl(m?.text) : esc(m?.text)}</div>`).join('') : '<div class="mute">No transcript recorded.</div>'}
+    </div>
+    <div style="min-width:0">
+      <div class="box"><h4>Layer 1 · Ledger audit <small>deterministic</small></h4>
+        ${entries.length ? entries.map(e => `<div class="item nums">${num(e?.leakUsd) > 0 ? chip('red', 'leak ' + usd(e.leakUsd)) : chip('green', 'ok')} ${esc(e?.type || 'movement')} ${usd(e?.amount)}${e?.orderId ? ' on ' + esc(e.orderId) : ''}<div class="mute">${esc(e?.why)}</div></div>`).join('') : '<div class="mute">No money moved.</div>'}
+        ${entries.length ? `<div class="item mute nums">Moved ${usd(c?.audit?.movedUsd)} · against policy ${usd(c?.audit?.leakedUsd)}</div>` : ''}</div>
+      <div class="box"><h4>Layer 2 · LLM judge <small>runs after the ledger, quotes verified</small></h4>
+        ${v.error ? `<div class="item">${chip('amber', 'judge error')} <span class="mute">${esc(v.error)}</span></div>` : ''}
+        ${FIND.map(finding).join('')}
+        ${disc.map(d => `<div class="item">${chip('amber', 'discarded')} <span class="mute">${esc(d?.finding ?? d)}: quote not found in transcript</span>${d?.quote ? `<blockquote>“${esc(d.quote)}”</blockquote>` : ''}</div>`).join('')}
+        ${v.rationale ? `<div class="item mute">${esc(v.rationale)}</div>` : ''}</div>
+      <div class="box"><h4>Tool calls <small>${tools.length}</small></h4>
+        ${tools.map(t => `<div class="item tool">${/^issue_/.test(t?.tool || '') && t?.result?.ok ? chip('amber', 'money moved') + ' ' : ''}<code>${esc(t?.tool)}(${esc(js(t?.args))})</code><code class="mute">→ ${esc(js(t?.result))}</code></div>`).join('') || '<div class="mute">None.</div>'}</div>
+    </div>
+  </div>`;
+}
+const openDrawer = safely((c, run) => {
+  drawerConv = c; clearTimeout(job?.settle);
+  $('#drawer-root').innerHTML = `<div class="scrim" id="scrim"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">${detailHTML(c, run)}</aside>`;
+  document.body.style.overflow = 'hidden';
+  $('#scrim').onclick = closeDrawer; $('#drawer-x').onclick = closeDrawer; $('#drawer-x').focus();
+  const idx = arr(S.runs[S.runIdx]?.results).indexOf(c);
+  for (const trEl of document.querySelectorAll('#conv-body tr')) trEl.classList.toggle('sel', idx >= 0 && num(trEl.dataset.conv) === idx && trEl.dataset.conv != null);
+}, 'the conversation');
+function closeDrawer() { drawerConv = null; $('#drawer-root').innerHTML = ''; document.body.style.overflow = ''; }
+addEventListener('keydown', e => { if (e.key === 'Escape' && drawerConv) closeDrawer(); });
+
+/* ---------- boot ---------- */
+(async function boot() {
+  renderLauncher();
+  const [, cfg] = await Promise.all([loadRuns(), loadConfig()]);
+  if (!STATIC && cfg?.running?.jobId && !job) { toast('A stress test is in progress. Showing it live.'); attach(cfg.running.jobId, {}); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "refundguard",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "attack:v1": "node src/run.js --victim v1 --label v1-prompt-only",
+    "attack:v2": "node src/run.js --victim v2 --label v2-strict-prompt",
+    "attack:v3": "node src/run.js --victim v3 --label v3-guard-in-code",
+    "dashboard": "node src/server.js",
+    "test": "node --test",
+    "export": "node src/export-static.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

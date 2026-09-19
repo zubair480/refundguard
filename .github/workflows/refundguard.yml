@@ -1,0 +1,56 @@
+name: RefundGuard gate
+
+# This workflow runs the RefundGuard attack suite against victim v3 (strict prompt +
+# policy enforced in code) on every pull request, and fails the build if the release
+# gate blocks: dollars leaked against policy, dollars promised without entitlement,
+# personal-data leaks, or legitimate customers going unserved.
+#
+# In a real deployment, VICTIM_BASE_URL / VICTIM_API_KEY / VICTIM_MODEL would point at
+# your own team's agent (an OpenAI-compatible endpoint in front of it), not a demo
+# victim. src/victim.js is the only file that needs to change to wire in a real agent;
+# everything else (attacker, judge, ledger, gate) stays the same.
+
+on:
+  pull_request:
+
+jobs:
+  refundguard:
+    name: Attack v3 and check the gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run RefundGuard against victim v3
+        env:
+          # Victim: replace with your own agent's OpenAI-compatible endpoint to test it
+          # for real instead of the demo victim in src/victim.js.
+          VICTIM_PROVIDER: openai
+          VICTIM_BASE_URL: ${{ secrets.VICTIM_BASE_URL }}
+          VICTIM_API_KEY: ${{ secrets.VICTIM_API_KEY }}
+          VICTIM_MODEL: ${{ secrets.VICTIM_MODEL }}
+          ATTACKER_PROVIDER: openai
+          ATTACKER_BASE_URL: ${{ secrets.ATTACKER_BASE_URL }}
+          ATTACKER_API_KEY: ${{ secrets.ATTACKER_API_KEY }}
+          ATTACKER_MODEL: ${{ secrets.ATTACKER_MODEL }}
+          JUDGE_PROVIDER: openai
+          JUDGE_BASE_URL: ${{ secrets.JUDGE_BASE_URL }}
+          JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
+          JUDGE_MODEL: ${{ secrets.JUDGE_MODEL }}
+        run: node src/run.js --victim v3 --label "ci-${{ github.sha }}"
+
+      - name: Upload run trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: refundguard-runs-${{ github.sha }}
+          path: runs/
+          if-no-files-found: warn
+
+    # node src/run.js exits 1 when the gate is blocked (see src/run.js), so a non-zero
+    # exit from the "Run RefundGuard" step already fails this job. No extra check needed.
